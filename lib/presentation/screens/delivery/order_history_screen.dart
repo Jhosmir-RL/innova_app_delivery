@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 
-class OrderHistoryScreen extends StatelessWidget {
+class OrderHistoryScreen extends StatefulWidget {
+  const OrderHistoryScreen({super.key});
+
+  @override
+  State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
+}
+
+class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   // Lista de pedidos finalizados
-  final List<Map<String, dynamic>> completedOrders = [
+  final List<Map<String, dynamic>> _completedOrders = [
     {
       'id': '12345',
       'deliveryDate': '15 Oct 2023',
@@ -12,7 +19,6 @@ class OrderHistoryScreen extends StatelessWidget {
       'courierCompany': 'Mensajería Rápida SA',
       'trackingNumber': 'ABC123456789',
       'deliveryAddress': 'Calle 123, Ciudad A',
-      'shippingStatus': 'Entregado',
       'contact': 'Juan Pérez - +123 456 7890',
       'shippingCost': '\$15.00',
     },
@@ -25,16 +31,21 @@ class OrderHistoryScreen extends StatelessWidget {
       'courierCompany': 'Envíos Veloces SL',
       'trackingNumber': 'XYZ987654321',
       'deliveryAddress': 'Avenida 456, Ciudad B',
-      'shippingStatus': 'Entregado',
       'contact': 'María Gómez - +987 654 3210',
       'shippingCost': '\$25.00',
     },
   ];
 
-  OrderHistoryScreen({super.key}); // Constructor sin 'const'
+  final String _searchQuery = ''; // Cambiado a final
 
   @override
   Widget build(BuildContext context) {
+    final filteredOrders = _completedOrders.where((order) {
+      return order['id'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          order['deliveryAddress'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          order['contact'].toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -42,12 +53,23 @@ class OrderHistoryScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.black),
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: OrderHistorySearchDelegate(_completedOrders),
+              );
+            },
+          ),
+        ],
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16.0),
-        itemCount: completedOrders.length,
+        itemCount: filteredOrders.length,
         itemBuilder: (context, index) {
-          final order = completedOrders[index];
+          final order = filteredOrders[index];
           return _buildOrderCard(order, context);
         },
       ),
@@ -138,7 +160,6 @@ class OrderHistoryScreen extends StatelessWidget {
                   _buildSectionTitle('Información del Pedido'),
                   _buildDetailItem('Número de Pedido', '#${order['id']}'),
                   _buildDetailItem('Fecha de Entrega', '${order['deliveryDate']} ${order['deliveryTime']}'),
-                  _buildDetailItem('Estado del Envío', order['shippingStatus']),
                   _buildDetailItem('Costos de Envío', order['shippingCost']),
 
                   const SizedBox(height: 20),
@@ -150,6 +171,7 @@ class OrderHistoryScreen extends StatelessWidget {
                   _buildDetailItem('Número de Seguimiento', order['trackingNumber']),
                   _buildDetailItem('Dirección de Entrega', order['deliveryAddress']),
                   _buildDetailItem('Contacto', order['contact']),
+
 
                   const SizedBox(height: 20),
 
@@ -178,6 +200,7 @@ class OrderHistoryScreen extends StatelessWidget {
       },
     );
   }
+
 
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -213,6 +236,66 @@ class OrderHistoryScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class OrderHistorySearchDelegate extends SearchDelegate<String> {
+  final List<Map<String, dynamic>> orders;
+
+  OrderHistorySearchDelegate(this.orders);
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () {
+          query = '';
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, '');
+      },
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  Widget _buildSearchResults() {
+    final results = orders.where((order) {
+      return order['id'].toLowerCase().contains(query.toLowerCase()) ||
+          order['deliveryAddress'].toLowerCase().contains(query.toLowerCase()) ||
+          order['contact'].toLowerCase().contains(query.toLowerCase());
+    }).toList();
+
+    return ListView.builder(
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final order = results[index];
+        return ListTile(
+          title: Text('Pedido #${order['id']}'),
+          subtitle: Text(order['deliveryAddress']),
+          onTap: () {
+            close(context, order['id']);
+          },
+        );
+      },
     );
   }
 }
